@@ -1,16 +1,73 @@
 plugins {
     id 'java'
+    id 'application'
+    id 'checkstyle'
 }
 
-group 'org.example'
+group 'org.athenian'
 version '1.0-SNAPSHOT'
 
-sourceCompatibility = 1.8
+application {
+    mainClass = 'MyMain'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    testCompile group: 'junit', name: 'junit', version: '4.12'
+    // JUnit 5 dependencies (latest stable - fully backwards compatible)
+    testImplementation('org.junit.jupiter:junit-jupiter-api:5.11.0')
+    testImplementation('org.junit.jupiter:junit-jupiter-params:5.11.0')
+    testRuntimeOnly('org.junit.jupiter:junit-jupiter-engine:5.11.0')
+    testRuntimeOnly('org.junit.platform:junit-platform-launcher:1.11.0')
+
+    // Google Java Format for code formatting tasks (latest)
+    runtimeOnly('com.google.googlejavaformat:google-java-format:1.23.0')
 }
+
+run {
+    standardInput = System.in
+}
+
+test {
+    useJUnitPlatform()
+
+    testLogging {
+        events "passed", "skipped", "failed", "standardOut", "standardError"
+        exceptionFormat "full"
+        showStandardStreams = true
+    }
+}
+
+checkstyle {
+    toolVersion = '10.17.0'  // Latest version
+    configFile = file('config/checkstyle/checkstyle.xml')
+}
+
+// Task to format code using Google Java Format
+task formatCode(type: JavaExec) {
+    group = 'formatting'
+    description = 'Format Java source code using Google Java Format'
+    
+    classpath = configurations.runtimeClasspath
+    mainClass = 'com.google.googlejavaformat.java.Main'
+    args = ['--replace'] + fileTree(dir: 'src', include: '**/*.java').files
+}
+
+// Task to check code formatting
+task checkFormat(type: JavaExec) {
+    group = 'verification'
+    description = 'Check if Java source code is properly formatted'
+    
+    classpath = configurations.runtimeClasspath
+    mainClass = 'com.google.googlejavaformat.java.Main'
+    args = ['--dry-run', '--set-exit-if-changed'] + fileTree(dir: 'src', include: '**/*.java').files
+}
+
+check.dependsOn checkFormat
